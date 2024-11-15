@@ -4,11 +4,12 @@ import java.io.*;
 import java.net.*;
 import java.time.Instant;
 
+import telran.net.exceptions.ServerUnavailableException;
 import org.json.JSONObject;
 
 import static telran.net.TcpConfigurationProperties.*;
 
-public class TcpClient implements Closeable {
+public class TcpClient implements Closeable, NetworkClient {
     Socket socket;
     PrintStream writer;
     BufferedReader reader;
@@ -43,6 +44,9 @@ public class TcpClient implements Closeable {
             }
 
         } while (count != 0);
+        if(socket == null) {
+            throw new ServerUnavailableException(host, port);
+        }
     }
 
     private void waitForInterval() {
@@ -52,12 +56,19 @@ public class TcpClient implements Closeable {
 
     @Override
     public void close() throws IOException {
-       socket.close();
+        if(socket != null) {
+            socket.close();
+        }
+
     }
+    @Override
     public String sendAndReceive(String requestType, String requestData) {
         Request request = new Request(requestType, requestData);
-       
+
         try {
+            if(socket == null) {
+                throw new ServerUnavailableException(host, port);
+            }
             writer.println(request);
             String responseJSON = reader.readLine();
             JSONObject jsonObj = new JSONObject(responseJSON);
@@ -68,7 +79,8 @@ public class TcpClient implements Closeable {
             }
             return responseData;
         } catch (IOException e) {
-            throw new RuntimeException("Server is unavailable");
+            connect();
+            throw new ServerUnavailableException(host, port);
         }
     }
 
