@@ -4,8 +4,9 @@ import java.io.*;
 import java.net.*;
 import java.time.Instant;
 
-import telran.net.exceptions.ServerUnavailableException;
 import org.json.JSONObject;
+
+import telran.net.exceptions.ServerUnavailableException;
 
 import static telran.net.TcpConfigurationProperties.*;
 
@@ -44,37 +45,44 @@ public class TcpClient implements Closeable, NetworkClient {
             }
 
         } while (count != 0);
-        if(socket == null) {
+        if (socket == null) {
             throw new ServerUnavailableException(host, port);
         }
     }
 
     private void waitForInterval() {
         Instant finish = Instant.now().plusMillis(interval);
-        while(Instant.now().isBefore(finish));
+        while (Instant.now().isBefore(finish))
+            ;
     }
 
     @Override
     public void close() throws IOException {
-        if(socket != null) {
+        if (socket != null) {
             socket.close();
         }
 
     }
+
     @Override
     public String sendAndReceive(String requestType, String requestData) {
         Request request = new Request(requestType, requestData);
 
         try {
-            if(socket == null) {
+            if (socket == null) {
+
                 throw new ServerUnavailableException(host, port);
             }
             writer.println(request);
             String responseJSON = reader.readLine();
+            if (responseJSON == null) {
+
+                throw new ServerUnavailableException(host, port);
+            }
             JSONObject jsonObj = new JSONObject(responseJSON);
             ResponseCode responseCode = jsonObj.getEnum(ResponseCode.class, RESPONSE_CODE_FIELD);
             String responseData = jsonObj.getString(RESPONSE_DATA_FIELD);
-            if(responseCode != ResponseCode.OK) {
+            if (responseCode != ResponseCode.OK) {
                 throw new RuntimeException(responseData);
             }
             return responseData;
